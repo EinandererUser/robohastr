@@ -7,16 +7,16 @@ import json
 import discord
 import asyncio
 
+from discord import http
+
 ########################################
 # -------- LOAD CONFIGURATION -------- #
 ########################################
 """
 {
     "token": <INSERT DISCORD TOKEN>,
-    "server": <INSERT SERVER ID>,
     "event": {
-        "params": 4,
-        "channel": "events",
+        "channel": "Events",
     }
 }
 """
@@ -28,6 +28,24 @@ if not config:
     exit(1)
 
 
+
+########################################
+# -------- UTILITY FUNCTIONS  -------- #
+########################################
+
+@asyncio.coroutine
+def fixed_edit_channel(client, channel, **options):
+    # get current parameters
+    keys = ['name', 'topic', 'position', 'parent_id']
+    for key in keys:
+        if key not in options:
+            options[key] = getattr(channel, key)
+
+    payload = { k: v for k, v in options.items() }
+    yield from client.http.request(http.Route('PATCH', '/channels/{channel_id}', channel_id=channel.id), json=payload)
+
+
+
 ########################################
 # ------- INIT DISCORD CLIENT  ------- #
 ########################################
@@ -36,12 +54,25 @@ client = discord.Client()
 
 async def create_event(name, date, briefing, slots):
     for server in client.servers:
-        chan = await client.create_channel(server, name)
-        await asyncio.sleep(1)
-        await client.move_channel(chan, 7)
-        await client.send_message(chan, date)
-        await client.send_message(chan, briefing)
-        await client.send_message(chan, slots)
+        # find parent channel (config['event']['channel'])
+        parent = None
+        for chIt in server.channels:
+            if chIt.name == config['event']['channel']:
+                parent = chIt
+                break
+                
+        if parent:
+            chan = await client.create_channel(server, name)
+            await asyncio.sleep(1)
+            if chan:
+                await fixed_edit_channel(client, chan, position=1, parent_id=parent.id)
+                await client.send_message(chan, date)
+                await client.send_message(chan, briefing)
+                await client.send_message(chan, slots)
+                
+        else:
+            print("Error: Unable to find event '{}' parent channel '{}'.".format(name, config['event']['channel']))
+            continue
 
 @client.event
 async def on_message(message):
@@ -58,7 +89,7 @@ async def on_message(message):
         #parse parameters
         params = message.content.split()
         del params[0]
-        if len(params) == config['event']['params']:
+        if len(params) == 4:
             await create_event(params[0], params[1], params[2], params[3])
         else:
             await client.send_message(message.channel, 'Please create an event with "!create-event <name> <date> <briefing> <slotting>')
