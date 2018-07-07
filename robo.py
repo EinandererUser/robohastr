@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A discord bot for automatic ARMA3 event management.
+A discord bot for automatic ARMA 3 event management.
 """
 
 import json
@@ -33,7 +33,7 @@ if not config:
 
 
 @asyncio.coroutine
-def fixed_edit_channel(client, channel, **options):
+def fixed_edit_channel(cli, channel, **options):
     # get current parameters
     keys = ['name', 'topic', 'position', 'parent_id']
     for key in keys:
@@ -41,11 +41,11 @@ def fixed_edit_channel(client, channel, **options):
             options[key] = getattr(channel, key)
 
     payload = { k: v for k, v in options.items() }
-    yield from client.http.request(http.Route('PATCH', '/channels/{channel_id}', channel_id=channel.id), json=payload)
+    yield from cli.http.request(http.Route('PATCH', '/channels/{channel_id}', channel_id=channel.id), json=payload)
 
 
 async def parse_params(params):
-    params.split()
+    params = params.split()
     del params[0]
     return params
 
@@ -92,7 +92,7 @@ async def on_message(message):
     # create a new event and posts event
     if message.content.startswith('!create-event'):
         # parse parameters
-        params = parse_params(message.content)
+        params = await parse_params(message.content)
         # enough parameters?
         if len(params) == 4:
             await create_event(params[0], params[1], params[2], params[3])
@@ -102,7 +102,7 @@ async def on_message(message):
     # create voice channel
     if message.content.startswith('!voice'):
         # parse parameters
-        params = parse_params(message.content)
+        params = await parse_params(message.content)
         # rejoin into string
         name = "".join(params)
         await asyncio.sleep(1)
