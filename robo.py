@@ -52,6 +52,7 @@ def fixed_edit_channel(client, channel, **options):
 
 client = discord.Client()
 
+
 async def create_event(name, date, briefing, slots):
     for server in client.servers:
         # find parent channel (config['event']['channel'])
@@ -74,6 +75,7 @@ async def create_event(name, date, briefing, slots):
             print("Error: Unable to find event '{}' parent channel '{}'.".format(name, config['event']['channel']))
             continue
 
+
 @client.event
 async def on_message(message):
     # we do not want the bot to reply to itself
@@ -86,13 +88,35 @@ async def on_message(message):
 
     # create a new event and posts event
     if message.content.startswith('!create-event'):
-        #parse parameters
+        # parse parameters
         params = message.content.split()
         del params[0]
         if len(params) == 4:
             await create_event(params[0], params[1], params[2], params[3])
         else:
             await client.send_message(message.channel, 'Please create an event with "!create-event <name> <date> <briefing> <slotting>')
+
+    # create voice channel
+    if message.content.startswith('!voice'):
+        # parse parameters (duplicate)
+        params = message.content.split()
+        del params[0]
+        # rejoin into string
+        name = "".join(params)
+        await asyncio.sleep(1)
+        # duplicate
+        for server in client.servers:
+            # find parent category 'Voice'
+            parent = None
+            for chIt in server.channels:
+                if chIt.name == 'Voice':
+                    parent = chIt
+                    break
+
+        chan = await client.create_channel(server, name, type=discord.ChannelType.voice)
+        if chan and parent:
+            await fixed_edit_channel(client, chan, position=5, parent_id=parent.id)
+
 
 @client.event
 async def on_ready():
