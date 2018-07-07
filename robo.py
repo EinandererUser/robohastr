@@ -27,11 +27,10 @@ if not config:
     print("Unable to load settings.")
     exit(1)
 
-
-
 ########################################
 # -------- UTILITY FUNCTIONS  -------- #
 ########################################
+
 
 @asyncio.coroutine
 def fixed_edit_channel(client, channel, **options):
@@ -45,6 +44,10 @@ def fixed_edit_channel(client, channel, **options):
     yield from client.http.request(http.Route('PATCH', '/channels/{channel_id}', channel_id=channel.id), json=payload)
 
 
+async def parse_params(params):
+    params.split()
+    del params[0]
+    return params
 
 ########################################
 # ------- INIT DISCORD CLIENT  ------- #
@@ -89,8 +92,8 @@ async def on_message(message):
     # create a new event and posts event
     if message.content.startswith('!create-event'):
         # parse parameters
-        params = message.content.split()
-        del params[0]
+        params = parse_params(message.content)
+        # enough parameters?
         if len(params) == 4:
             await create_event(params[0], params[1], params[2], params[3])
         else:
@@ -98,9 +101,8 @@ async def on_message(message):
 
     # create voice channel
     if message.content.startswith('!voice'):
-        # parse parameters (duplicate)
-        params = message.content.split()
-        del params[0]
+        # parse parameters
+        params = parse_params(message.content)
         # rejoin into string
         name = "".join(params)
         await asyncio.sleep(1)
